@@ -27,5 +27,5 @@ class EventSignUp(models.Model):
     born_location = models.CharField(blank=True, null=True, max_length=250)
     document_number = models.PositiveIntegerField(blank=True, null=True)
     # Almacenados como blob
-    document_front_picture = models.ImageField()
-    document_back_picture = models.ImageField()
+    document_front_picture = models.ImageField(blank=True, null=True)
+    document_back_picture = models.ImageField(blank=True, null=True)

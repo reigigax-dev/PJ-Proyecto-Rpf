@@ -11,4 +11,5 @@ from . import views
 '''
 
 urlpatterns = [
+    path('event/signups/', views.EventSignUpListAPIView.as_view(), name='signup-list')
 ]

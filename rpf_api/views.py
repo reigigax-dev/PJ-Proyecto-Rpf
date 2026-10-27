@@ -1,3 +1,8 @@
 from django.shortcuts import render
+from rest_framework import generics
+from .serializers import EventSignUpSerializer
+from .models import EventSignUp
 
-# Create your views here.
+class EventSignUpListAPIView(generics.ListAPIView):
+    queryset = EventSignUp.objects.all()
+    serializer_class = EventSignUpSerializer
