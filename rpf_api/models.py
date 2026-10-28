@@ -18,7 +18,7 @@ from django.db import models
 class EventSignUp(models.Model):
     # Requeridos
     document = models.CharField(blank=False, null=False, max_length=9)
-    firt_names = models.CharField(blank=False, null=False, max_length=350)
+    fisrt_names = models.CharField(blank=False, null=False, max_length=350)
     last_names = models.CharField(blank=False, null=False, max_length=350)
     sex = models.BooleanField(blank=False, null=False)
     born_date = models.DateField(blank=False, null=False)

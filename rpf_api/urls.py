@@ -1,4 +1,7 @@
-from django.urls import path
+from django.urls import path, include
+from drf_spectacular.views import (
+    SpectacularAPIView, SpectacularSwaggerView
+)
 from rest_framework_simplejwt.views import (
     TokenObtainPairView, TokenRefreshView,
 )
@@ -10,6 +13,17 @@ from . import views
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 '''
 
-urlpatterns = [
-    path('event/signups/', views.EventSignUpListAPIView.as_view(), name='signup-list')
+urlpatterns = [   
+    # Endpoints de la libreria Silk
+    path('silk/', include('silk.urls')),
+
+    # Acceso a la documentacion de los endpoints de la API
+    path('schema/', SpectacularSwaggerView.as_view(), name='schema-swagger'),
+    path('schema/download/', SpectacularAPIView.as_view(), name='schema'),
+
+    # Endpoints de la tabla EVENT SIGN UP
+    path('signup/list/', views.EventSignUpListAPIView.as_view(), name='list-signup'),                       # Listar
+    path('signup/add/', views.EventSignUpCreateAPIView.as_view(), name='create-list'),                      # Crear
+    path('signup/edit/<int:signup_id>/', views.EventSignUpUpdateAPIView.as_view(), name='edit-signup'),     # Modificar
+    path('signup/delete/<int:signup_id>/', views.EventSignUpDeleteAPIView.as_view(), name='delete-signup'), # Eliminar
 ]

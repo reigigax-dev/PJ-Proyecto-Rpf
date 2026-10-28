@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: API de Registros Locales
+  version: 1.0.0
+  description: Esta api tiene la unica funcion de manejar registros temporales los
+    cuales seran trasladados a un excel
+paths:
+  /api/v1/signup/add/:
+    post:
+      operationId: signup_add_create
+      tags:
+      - signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+  /api/v1/signup/delete/{signup_id}/:
+    get:
+      operationId: signup_delete_retrieve
+      parameters:
+      - in: path
+        name: signup_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - signup
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+    delete:
+      operationId: signup_delete_destroy
+      parameters:
+      - in: path
+        name: signup_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - signup
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/signup/edit/{signup_id}/:
+    get:
+      operationId: signup_edit_retrieve
+      parameters:
+      - in: path
+        name: signup_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - signup
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+    put:
+      operationId: signup_edit_update
+      parameters:
+      - in: path
+        name: signup_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventSignUpList'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+    patch:
+      operationId: signup_edit_partial_update
+      parameters:
+      - in: path
+        name: signup_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEventSignUpList'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEventSignUpList'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEventSignUpList'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+  /api/v1/signup/list/:
+    get:
+      operationId: signup_list_list
+      tags:
+      - signup
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSignUpList'
+          description: ''
+components:
+  schemas:
+    EventSignUpList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        document:
+          type: string
+          maxLength: 9
+        fisrt_names:
+          type: string
+          maxLength: 350
+        last_names:
+          type: string
+          maxLength: 350
+        sex:
+          type: boolean
+        born_date:
+          type: string
+          format: date
+        born_location:
+          type: string
+          nullable: true
+          maxLength: 250
+        document_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        document_front_picture:
+          type: string
+          format: uri
+          nullable: true
+        document_back_picture:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - born_date
+      - document
+      - fisrt_names
+      - id
+      - last_names
+      - sex
+    PatchedEventSignUpList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        document:
+          type: string
+          maxLength: 9
+        fisrt_names:
+          type: string
+          maxLength: 350
+        last_names:
+          type: string
+          maxLength: 350
+        sex:
+          type: boolean
+        born_date:
+          type: string
+          format: date
+        born_location:
+          type: string
+          nullable: true
+          maxLength: 250
+        document_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        document_front_picture:
+          type: string
+          format: uri
+          nullable: true
+        document_back_picture:
+          type: string
+          format: uri
+          nullable: true
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
