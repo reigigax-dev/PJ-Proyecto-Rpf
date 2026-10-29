@@ -107,8 +107,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    'localhost:5173',
-    '127.0.0.1:5173',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ]
 
 TESSERACT_CMD = os.environ.get(

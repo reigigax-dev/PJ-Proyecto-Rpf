@@ -26,5 +26,5 @@ urlpatterns = [
     path('signup/add/', views.EventSignUpCreateAPIView.as_view(), name='create-list'),                      # Crear
     path('signup/edit/<int:signup_id>/', views.EventSignUpUpdateAPIView.as_view(), name='edit-signup'),     # Modificar
     path('signup/delete/<int:signup_id>/', views.EventSignUpDeleteAPIView.as_view(), name='delete-signup'), # Eliminar
-    path('singup/scan/', views.EventSignUpScanAPIView.as_view(), name='scan-signup')
+    path('signup/scan/', views.EventSignUpScanAPIView.as_view(), name='scan-signup')
 ]
