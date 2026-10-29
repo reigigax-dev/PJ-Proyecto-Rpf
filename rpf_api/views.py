@@ -1,5 +1,6 @@
 import pytesseract
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -60,14 +61,22 @@ class EventSignUpScanAPIView(generics.GenericAPIView):
     @extend_schema(
         request={'multipart/form-data': EventSignUpScanSerializer},
         responses=EventSignUpScanResutSerializer,
+        parameters=[
+            OpenApiParameter(
+                'debug', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
+                description='Si es true, incluye el texto leído por el OCR (para diagnosticar).',
+            )
+        ]
     )
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        debug = request.query_params.get('debug', '').lower() in ('1', 'true', 'si')
         try:
             data = scan_carnet(
                 serializer.validated_data['document_front_picture'],
                 serializer.validated_data['document_back_picture'],
+                debug=debug,
             )
         except pytesseract.TesseractNotFoundError:
             return Response(
