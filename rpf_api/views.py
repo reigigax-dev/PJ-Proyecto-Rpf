@@ -1,8 +1,12 @@
 import pytesseract
+<<<<<<< HEAD
 from django.utils import timezone
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+=======
+from drf_spectacular.utils import extend_schema
+>>>>>>> parent of 432e04e (Se finaliza* la funcion de escaneo de carnet de identidad (se presentan inconvenientes para detectar la ubicacion de nacimiento y el sexo es detectado por el contrario al del carnet))
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -65,22 +69,14 @@ class EventSignUpScanAPIView(generics.GenericAPIView):
     @extend_schema(
         request={'multipart/form-data': EventSignUpScanSerializer},
         responses=EventSignUpScanResutSerializer,
-        parameters=[
-            OpenApiParameter(
-                'debug', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
-                description='Si es true, incluye el texto leído por el OCR (para diagnosticar).',
-            )
-        ]
     )
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        debug = request.query_params.get('debug', '').lower() in ('1', 'true', 'si')
         try:
             data = scan_carnet(
                 serializer.validated_data['document_front_picture'],
                 serializer.validated_data['document_back_picture'],
-                debug=debug,
             )
         except pytesseract.TesseractNotFoundError:
             return Response(

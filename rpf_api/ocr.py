@@ -1,5 +1,4 @@
-import os, re, unicodedata, pytesseract, cv2
-import numpy as np
+import os, re, unicodedata, pytesseract
 from django.conf import settings
 from datetime import date
 from PIL import Image, ImageOps, ImageFilter
@@ -9,35 +8,40 @@ REQUIRED_DATA = ["document", "first_names", "last_names", "sex", "born_date"]
 
 MONTHS = {
     "ENE": 1, "FEB": 2, "MAR": 3, "ABR": 4, "MAY": 5, "JUN": 6,
-    "JUL": 7, "AGO": 8, "SEP": 9, "SET": 9, "OCT": 10, "NOV": 11, "DIC": 12,
+    "JUL": 7, "AGO": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DIC": 12,
 }
 LETTERS = "A-ZÁÉÍÓÚÑÜ"
 MRZ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<"
-DIGITLIKE = "0-9OQDILZSBG"
-TO_DIGIT = str.maketrans("OQDILZSBG", "000112586")
-TO_LETTER = str.maketrans("0158", "OISB")
+TO_DIGIT = str.maketrans("OQDILZSBG","000115586")
 
-CARD_W, CARD_H = 1712, 1080
-LABEL_WORDS = {
-    "APELLIDOS", "APELLIDO", "NOMBRES", "NOMBRE", "NACIONALIDAD", "SEXO",
-    "FECHA", "NACIMIENTO", "NUMERO", "DOCUMENTO", "EMISION", "VENCIMIENTO",
-    "CHILENA", "CHILENO", "RUN", "REPUBLICA", "CHILE", "CEDULA", "IDENTIDAD",
-    "SURNAMES", "NAMES", "SEX", "NATIONALITY"
-}
-
-def _configure_tessereact():
-    cmd = getattr(settings, "TESSERACT_CMD", None) or os.environ.get("TESSERACT_CMD")
-    if  cmd:
+def _configure_tesseract():
+    cmd =  None
+    try:
+        cmd = getattr(settings, "TESSERACT_CMD", None)
+    except Exception:
+        pass
+    cmd = cmd or os.environ.get("TESSERACT_CMD")
+    if cmd:
         pytesseract.pytesseract.tesseract_cmd = cmd
+
+def _prepare(file):
+    file.seek(0)
+    img = ImageOps.exif_transpose(Image.open(file))
+    file.seek(0)
+    img = ImageOps.grayscale(img)
+    if img.width < 1600:
+        factor = 1600 / img.width
+        img = img.resize((1600, int(img.height * factor)), Image.LANCZOS)
+    img = ImageOps.autocontrast(img)
+    return img.filter(ImageFilter.SHARPEN)
 
 def _ocr(img, config=""):
     try:
         return pytesseract.image_to_string(img, lang="spa", config=config)
-    except pytesseract.TesseractNotFoundError:
-        raise
-    except pytesseract.TesseractError:
+    except:
         return pytesseract.image_to_string(img, config=config)
 
+<<<<<<< HEAD
 
 
 def _load(file):
@@ -244,130 +248,132 @@ def read_back(bgr):
 
 
 
+=======
+>>>>>>> parent of 432e04e (Se finaliza* la funcion de escaneo de carnet de identidad (se presentan inconvenientes para detectar la ubicacion de nacimiento y el sexo es detectado por el contrario al del carnet))
 def _without_accents(text):
     return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
 
 def _clave(text):
     return re.sub(r"[^A-Z]", "", _without_accents(text.upper()))
 
-def _is_label(line, *words):
-    plain = _clave(line)
-    return any(w in plain for w in words)
+def rut_validation(rut):
+    clean = re.sub(r"[^0-9Kk]", "", rut).upper()
+    if len(clean) < 2 or not clean[:-1].isdigit():
+        return False
+    body, vd = clean[:-1], clean[-1]
+    sumation, factor = 0, 2
+    for d in reversed(body):
+        sumation += int(d) * factor
+        factor = 2 if factor == 7 else factor + 1
+    verification = {11: "0", 10: "K"}.get(11 - sumation % 11, str(11 - sumation % 11))
+    return vd == verification 
 
-def _name_tokens(line):
-    tokens = re.findall(rf"[{LETTERS}]{{2,}}", line.upper())
-    return [t for t in tokens if _without_accents(t) not in LABEL_WORDS]
+def rut_unformatted(rut):
+    return re.sub(r"[^0-9Kk]", "", rut).upper()
 
-def _parse_date(day, month, year):
-    month = month.translate(TO_LETTER) if re.search(r"[A-Z]", month) else month.translate(TO_DIGIT)
-    month_num = MONTHS.get(month[:3]) if month.isalpha() else int(month)
-    return date(int(year.translate(TO_DIGIT)), month_num, int(day.translate(TO_DIGIT)))
+def _vd_mrz(field):
+    pesos, total = (7, 3, 1), 0
+    for i, c in enumerate(field):
+        value = int(c) if c.isdigit() else (ord(c) - 55 if c.isalpha() else 0)
+        total += value * pesos[i % 3]
+    return str(total % 10)
 
-def _dates(line):
-    found = []
-    pattern = rf"\b([{DIGITLIKE}]{{1,2}})\s*[ /.\-]\s*([A-Z0-9]{{3}}|\d{{1,2}})\s*[ /.\-]\s*([{DIGITLIKE}]{{4}})"
-    for d, m, y in re.findall(pattern, _without_accents(line.upper())):
+def _date_mrz(yymmdd):
+    yy, mm, dd = int(yymmdd[:2]), int(yymmdd[2:4]), int(yymmdd[4:6])
+    century = 2000 if 2000 + yy <= date.today().year else 1900
+    return date(century + yy, mm, dd)
+
+
+def read_mrz(img):
+    text = _ocr(img, config=f"--psm 6 -c tessedit_char_whitelist={MRZ_CHARS}")
+    lines = [re.sub(r"\s+", "", l).upper() for l in text.splitlines()]
+    lines = [l for l in lines if len(l) >= 20 and "<" in l]
+
+    for i, line in enumerate(lines):
+        if re.match(r"^I[A-Z<]CHL", line) and i + 2 < len(lines):
+            return parse_mrz(*lines[i:i + 3])
+    for i, line in enumerate(lines):
+        if re.match(r"^I[0-9O]{6}[0-9O][MF<]", line) and i + 1 < len(lines):
+            return parse_mrz("", line, lines[i + 1])
+    return{}
+
+def parse_mrz(line1, line2, line3):
+    data = {}
+    line1, line2 = line1.ljust(30, "<"), line2.ljust(30, "<")
+
+    if line1.strip("<"):
+        number = line1[5:14].translate(TO_DIGIT)
+        if number.isdigit() and _vd_mrz(number) == line1[14].translate(TO_DIGIT):
+            data["document_number"] = int(number)
+        m = re.search(r"(\d{7,8})[<\-]?([0-9K])", line1[15:].translate(str.maketrans("O", "0")))
+        if m and rut_validation(m.group(1) + m.group(2)):
+            data["document"] = m.group(1) + m.group(2)
+
+    born_date = line2[0:6].translate(TO_DIGIT)
+    if born_date.isdigit() and _vd_mrz(born_date) == line2[6].translate(TO_DIGIT):
         try:
-            found.append(_parse_date(d, m, y))
-        except (TypeError, ValueError):
-            continue
-    return found
+            data["born_date"] = _date_mrz(born_date)
+        except ValueError:
+            pass
+    if line2[7] in SEX_TO_BOOL:
+        data["sex"] = SEX_TO_BOOL[line2[7]]
 
-def _names_by_position(lines):
-    start = next((i for i, l in enumerate(lines) if _is_label(l, "IDENTIDAD", "CEDULA")), -1)
-    end = next((i for i, l in enumerate(lines) if _is_label(l, "CHILEN", "NACIONAL", "EXTRANJER")), None)
-    if end is None or end <= start:
-        return {}
-    name_lines = []
-    for l in lines[start + 1:end]:
-        tokens = _name_tokens(l)
-        if tokens and sum(map(len, tokens)) >= 0.7 * len(re.sub(rf"[^{LETTERS}0-9]", "", l)):
-            name_lines.append(tokens)
-    if len(name_lines) < 2:
-        return {}
-    name_lines = name_lines[-3:]
-    return {
-        "last_names": " ".join(t for ts in name_lines[:-1] for t in ts).title(),
-        "first_names": " ".join(name_lines[-1]).title(),
-    }
+    line3 = re.sub(r"[<K]{3,}$", "", line3.strip("<"))
+    if "<<" in line3:
+        last_names, first_names = line3.split("<<", 1)
+        last_names = last_names.replace("<", " ").strip()
+        first_names = first_names.replace("<", " ").strip()
+        if last_names and first_names:
+            data["last_names"] = first_names.title()
+            data["first_names"] = last_names.title()
+    return data
 
-def _accented(mrz_value, front_texts):
-    words = set(re.findall(rf"[{LETTERS}]{{2,}}", " ".join(front_texts).upper()))
-    result = []
-    for token in mrz_value.upper().split():
-        match = next((w for w in words if w != token and _without_accents(w) == token), None)
-        result.append(match or token)
-    return " ".join(result).title()
+def _line_of_letters(lines):
+    return [l for l in lines if re.fullmatch(rf"[{LETTERS}' -]{{2,}}", l)]
 
 def parse_front(text):
     data = {}
     lines = [re.sub(r"\s+", " ", l).strip().upper() for l in text.splitlines()]
     lines = [l for l in lines if l]
 
-    rut = find_rut(text)
-    if rut:
-        data["document"] = rut
+    for m in re.finditer(r"\b(\d{1,2}\.?\d{3}\s?-\s?[\dK])\b", text.upper()):
+        if rut_validation(m.group(1)):
+            data["document"] = rut_unformatted(m.group(1))
+            break
 
-    i_last = next((i for i, l in enumerate(lines) if _is_label(l, "APELLIDO", "PELLIDO")), None)
-    i_first = next((i for i, l in enumerate(lines) if _is_label(l, "NOMBRE", "OMBRES")), None)
-    stop = ("NACIONAL", "SEXO", "FECHA", "NACIMIENTO", "RUN", "DOCUMENTO")
-
-    if i_last is not None and i_first is not None and i_last < i_first:
-        tokens = [t for l in lines[i_last + 1:i_first] for t in _name_tokens(l)]
-        if tokens:
-            data["last_names"] = " ".join(tokens).title()
-    if i_first is not None:
-        tokens = []
-        for l in lines[i_first + 1:i_first + 3]:
-            if _is_label(l, *stop):
+    i_last_name = next((i for i, l in enumerate(lines) if "APELLIDO" in l), None)
+    i_first_name = next((i for i, l in enumerate(lines) if "NOMBRE" in l), None)
+    if i_last_name is not None and i_first_name is not None and i_last_name < i_first_name:
+        last_names = _line_of_letters(lines[i_last_name + 1:i_first_name])
+        if last_names:
+            data["last_names"] = " ".join(last_names).title()
+    if i_first_name is not None:
+        first_names = []
+        for l in lines[i_first_name + 1:]:
+            if re.search(r"NACIONAL|SEXO|FECHA|RUN", l):
                 break
-            tokens += _name_tokens(l)
-        if tokens:
-            data["first_names"] = " ".join(tokens).title()
-    if i_last is None and i_first is None:
-        data.update(_names_by_position(lines))
+            first_names += _line_of_letters([l])
+        if first_names:
+            data["first_names"] = " ".join(first_names).title()
 
-    for i, l in enumerate(lines[:-1]):
-        if _is_label(l, "SEXO"):
-            m = re.search(r"(?:^|\s)([MF])(?:\s|$)", lines[i + 1])
-            if m:
-                data["sex"] = SEX_TO_BOOL[m.group(1)]
-            break
-
-    for i, l in enumerate(lines[:-1]):
-        if _is_label(l, "NACIMIENTO"):
-            found = _dates(lines[i + 1])
-            if found:
-                data["born_date"] = found[0]
-            break
-    if "born_date" not in data:
-        past = [d for l in lines for d in _dates(l) if 1900 < d.year and d < date.today()]
-        if past:
-            data["born_date"] = min(past)
-
-    m = re.search(rf"([{DIGITLIKE}]{{3}})[.,]([{DIGITLIKE}]{{3}})[.,]([{DIGITLIKE}]{{3}})", text.upper())
+    m = re.search(r"SEXO.{0,60}?\b([MF])\b", text.upper(), re.S)
     if m:
-        number = "".join(m.groups()).translate(TO_DIGIT)
-        if number.isdigit():
-            data["document_number"] = int(number)
+        data["sex"] = SEX_TO_BOOL[m.group(1)]
+
+    dates = []
+    pattern = r"\b(\d{1,2})\s*[ /.\-]\s*([A-Z]{3}|\d{1,2})\s*[ /.\-]\s*(\d{4})\b"
+    for day, month, year in re.findall(pattern, _without_accents(text.upper())):
+        try:
+            dates.append(date(int(year), MONTHS[month] if month.isalpha() else int(month), int(day)))
+        except (KeyError, ValueError):
+            continue
+    if dates:
+        data["born_date"] = min(dates)
+
+    m = re.search(r"\b(\d{3}\.\d{3}\.\d{3})\b", text)
+    if m:
+        data["document_number"] = int(m.group(1).replace(".", ""))
     return data
-
-def read_front(bgr):
-    card, found = _normalize(bgr)
-    data, texts = {}, []
-    variants = [_clean(card), _gray(card)]
-    if found:
-        variants.append(_clean(card[:, int(CARD_W * 0.28):]))
-    for variant in variants:
-        text = _ocr(_to_pil(variant), config="--psm 6")
-        texts.append(text)
-        for k, v in parse_front(text).items():
-            data.setdefault(k, v)
-        if all(k in data for k in ("document", "first_names", "last_names", "born_date")):
-            break
-    return data, {"card_found": found, "text": texts}
-
-
 
 def read_born_place(text):
     lines = [l.strip() for l in text.upper().splitlines() if l.strip()]
@@ -407,7 +413,12 @@ def _born_place_texts(card, original):
     yield _ocr(_to_pil(cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)))
 
 
+def scan_carnet(frontal_img, back_img):
+    _configure_tesseract()
+    frontal_img = _prepare(frontal_img)
+    back_img = _prepare(back_img)
 
+<<<<<<< HEAD
 def _merge_name(front_value, mrz_value, front_texts):
     if front_value and mrz_value and _clave(front_value) == _clave(mrz_value):
         return front_value
@@ -436,13 +447,37 @@ def scan_carnet(frontal_img, back_img, debug=False):
     data["first_names"] = _merge_name(front.get("first_names"), mrz.get("first_names"), front_texts)
     data["last_names"] = _merge_name(front.get("last_names"), mrz.get("last_names"), front_texts)
     data["born_location"] = born_place
+=======
+    front = parse_front(_ocr(frontal_img))
+    mrz = read_mrz(back_img)
+    back_text = _ocr(back_img)
 
-    for field, size in (("first_names", 350), ("last_names", 350), ("born_location", 250)):
+    data = {}
+    for field in ("born_date", "sex", "document_number", "document"):
+        data[field] = mrz.get(field, front.get(field))
+    if data["document"] is None:
+        data["document"] = front.get("document")
+
+    for field in ("first_names", "last_names"):
+        f, m = front.get(field), mrz.get(field)
+        if f and m:
+            data[field] = f if _clave(f) == _clave(m) else m
+        else:
+            data[field] = f or m
+
+    data["born_location"] = read_born_place(back_text)
+>>>>>>> parent of 432e04e (Se finaliza* la funcion de escaneo de carnet de identidad (se presentan inconvenientes para detectar la ubicacion de nacimiento y el sexo es detectado por el contrario al del carnet))
+
+    for field in ("first_names", "last_names"):
         if data[field]:
-            data[field] = data[field][:size]
-    data["born_date"] = _to_iso(data["born_date"])
+            data[field] = data[field][:350]
+    if data["born_location"]:
+        data["born_location"] = data["born_location"][:250]
+    if data["born_date"]:
+        data["born_date"] = data["born_date"].isoformat()
 
     data["missing_data"] = [c for c in REQUIRED_DATA if data.get(c) in (None, "")]
+<<<<<<< HEAD
     if debug:
         data["debug"] = {
             "front": front_dbg,
@@ -473,3 +508,6 @@ def _to_iso(value):
         return date(int(y), int(mo), int(d)).isoformat()
     except ValueError:
         return None
+=======
+    return data
+>>>>>>> parent of 432e04e (Se finaliza* la funcion de escaneo de carnet de identidad (se presentan inconvenientes para detectar la ubicacion de nacimiento y el sexo es detectado por el contrario al del carnet))

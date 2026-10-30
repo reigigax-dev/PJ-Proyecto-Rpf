@@ -26,6 +26,10 @@ urlpatterns = [
     path('signup/add/', views.EventSignUpCreateAPIView.as_view(), name='create-list'),                      # Crear
     path('signup/edit/<int:signup_id>/', views.EventSignUpUpdateAPIView.as_view(), name='edit-signup'),     # Modificar
     path('signup/delete/<int:signup_id>/', views.EventSignUpDeleteAPIView.as_view(), name='delete-signup'), # Eliminar
+<<<<<<< HEAD
     path('signup/scan/', views.EventSignUpScanAPIView.as_view(), name='scan-signup'),
     path('signup/export/', views.EventSignUpExportAPIView.as_view(), name='export-signups'),
+=======
+    path('signup/scan/', views.EventSignUpScanAPIView.as_view(), name='scan-signup')
+>>>>>>> parent of 432e04e (Se finaliza* la funcion de escaneo de carnet de identidad (se presentan inconvenientes para detectar la ubicacion de nacimiento y el sexo es detectado por el contrario al del carnet))
 ]
