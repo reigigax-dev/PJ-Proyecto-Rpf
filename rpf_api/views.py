@@ -1,12 +1,5 @@
 import pytesseract
-<<<<<<< HEAD
 from drf_spectacular.utils import extend_schema
-=======
-from django.utils import timezone
-from django.http import HttpResponse
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
->>>>>>> d3e81cb (Funcion principal de ecaneo y exportacion de registros a excel realizada)
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.parsers import FormParser, MultiPartParser
