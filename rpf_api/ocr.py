@@ -106,6 +106,13 @@ def _to_pil(arr):
     return Image.fromarray(arr)
 
 
+def _legacy(bgr):
+    img = ImageOps.grayscale(Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)))
+    if img.width < 1600:
+        img = img.resize((1600, int(img.height * 1600 / img.width)), Image.LANCZOS)
+    return ImageOps.autocontrast(img).filter(ImageFilter.SHARPEN)
+
+
 
 def rut_unformatted(rut):
     return re.sub(r"[^0-9Kk]", "", rut).upper()
@@ -227,8 +234,13 @@ def read_back(bgr):
             mrz.setdefault(k, v)
         if all(k in mrz for k in ("born_date", "last_names", "first_names", "document")):
             break
-    general = _ocr(_to_pil(_gray(card)))
-    return mrz, general, {"card_found": found, "mrz_text": texts, "text": general}
+    general, born_place = [], None
+    for text in _born_place_texts(card, bgr):
+        general.append(text)
+        born_place = read_born_place(text)
+        if born_place:
+            break
+    return mrz, born_place, {"card_found": found, "mrz_text": texts, "text": general}
 
 
 
@@ -358,8 +370,41 @@ def read_front(bgr):
 
 
 def read_born_place(text):
-    m = re.search(rf"NAC\w{{1,4}}\s+EN\s*[:.;]?\s*([{LETTERS} ]{{3,}})", text.upper())
-    return m.group(1).strip().title() if m else None
+    lines = [l.strip() for l in text.upper().splitlines() if l.strip()]
+    for line in lines:
+        m = re.search(rf"NAC[A-Z0-9ÁÉÍÓÚ]{{1,3}}\s*EN\s*[:.;,]?\s*([{LETTERS}][{LETTERS} .'-]{{2,}})", line)
+        if not m:
+            continue
+        value = _place_words(re.split(r"\s{2,}|PROFESI", m.group(1))[0])
+        if value:
+            return value
+
+    for i, line in enumerate(lines):
+        if re.search(r"PROF[EÉ]S", _without_accents(line)) and i > 0:
+            previous = lines[i - 1].split(":")[-1]
+            value = _place_words(previous)
+            if value and _without_accents(value.upper()).replace(" ", "") not in LABEL_WORDS:
+                return value
+    return None
+
+
+def _place_words(text):
+    words = [w for w in re.findall(rf"[{LETTERS}]+", text.upper()) if len(w) >= 2]
+    letters = len(re.sub(rf"[^{LETTERS}]", "", text.upper()))
+    if not words or sum(map(len, words)) < 0.8 * letters:
+        return None
+    return " ".join(words).title()
+
+
+def _born_place_texts(card, original):
+    h = card.shape[0]
+    top = card[: int(h * 0.5), :]
+    top = cv2.resize(top, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_CUBIC)
+    yield _ocr(_to_pil(_gray(card)))
+    yield _ocr(_legacy(original))
+    yield _ocr(_to_pil(cv2.cvtColor(top, cv2.COLOR_BGR2GRAY)))
+    yield _ocr(_to_pil(_clean(top)))
+    yield _ocr(_to_pil(cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)))
 
 
 
@@ -374,9 +419,9 @@ def scan_carnet(frontal_img, back_img, debug=False):
     _configure_tessereact()
     front_bgr, back_bgr = _load(frontal_img), _load(back_img)
 
-    mrz, back_text, back_dbg = read_back(back_bgr)
+    mrz, born_place, back_dbg = read_back(back_bgr)
     if not mrz:
-        mrz, back_text, back_dbg = read_back(cv2.rotate(back_bgr, cv2.ROTATE_180))
+        mrz, born_place, back_dbg = read_back(cv2.rotate(back_bgr, cv2.ROTATE_180))
 
     front, front_dbg = read_front(front_bgr)
     if not front.get("document") and not front.get("last_names"):
@@ -390,7 +435,7 @@ def scan_carnet(frontal_img, back_img, debug=False):
     front_texts = front_dbg["text"]
     data["first_names"] = _merge_name(front.get("first_names"), mrz.get("first_names"), front_texts)
     data["last_names"] = _merge_name(front.get("last_names"), mrz.get("last_names"), front_texts)
-    data["born_location"] = read_born_place(back_text)
+    data["born_location"] = born_place
 
     for field, size in (("first_names", 350), ("last_names", 350), ("born_location", 250)):
         if data[field]:
@@ -411,7 +456,6 @@ def _jsonable(d):
     return {k: (v.isoformat() if isinstance(v, date) else v) for k, v in d.items()}
 
 def _to_iso(value):
-    """Acepta date o texto ('2004-11-05', '05/11/2004') y devuelve 'AAAA-MM-DD' o None."""
     if value is None or value == "":
         return None
     if isinstance(value, date):

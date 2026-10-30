@@ -165,3 +165,11 @@ td.fotos img {
   border-radius: 4px;
   margin-right: 4px;
 }
+
+.encabezado-tabla {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}

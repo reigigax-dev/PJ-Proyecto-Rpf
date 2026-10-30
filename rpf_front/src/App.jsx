@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { eliminarRegistro, listarRegistros } from './api';
-import CapturaCarnet from './components/CapturaCarnet';
-import './App.css'
+import { useEffect, useState } from "react";
+import { descargarExcel, eliminarRegistro, listarRegistros } from "./api";
+import CapturaCarnet from "./components/CapturaCarnet";
+import "./App.css";
 
 function formatearRut(rut) {
   if (!rut) return "";
@@ -9,9 +9,12 @@ function formatearRut(rut) {
   return `${cuerpo}-${rut.slice(-1)}`;
 }
 
+const SEXO = { true: "F", false: "M" };
+
 export default function App() {
   const [registros, setRegistros] = useState([]);
   const [error, setError] = useState("");
+  const [descargando, setDescargando] = useState(false);
 
   const cargar = () =>
     listarRegistros()
@@ -25,20 +28,36 @@ export default function App() {
     cargar();
   }, []);
 
-  async function eliminar(id){
-    if (!confirm(`¿Eliminar el registro #${id}?`)) return;
+  async function eliminar(id) {
+    if (!confirm(`¿Eliminar el registro #${id} y sus fotos?`)) return;
     await eliminarRegistro(id).catch((e) => alert(e.message));
     cargar();
   }
 
+  async function exportar() {
+    setDescargando(true);
+    try {
+      await descargarExcel();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setDescargando(false);
+    }
+  }
+
   return (
     <main>
-      <h1>Registro con Carnet</h1>
-      <p className="ayuda">Posiciona el carnet en el recuadro: primero por el frente y luego por el reverso</p>
-    
+      <h1>Registro con carnet</h1>
+      <p className="ayuda">Muestra el carnet a la cámara: primero el frente y luego el reverso.</p>
+
       <CapturaCarnet onGuardado={cargar} />
 
-      <h2>Registros ({registros.length})</h2>
+      <div className="encabezado-tabla">
+        <h2>Registros ({registros.length})</h2>
+        <button onClick={exportar} disabled={descargando || registros.length === 0}>
+          {descargando ? "Generando…" : "Descargar Excel"}
+        </button>
+      </div>
       {error && <p className="mensaje error">{error}</p>}
       <div className="tabla">
         <table>
@@ -59,18 +78,16 @@ export default function App() {
                 <td>{formatearRut(r.document)}</td>
                 <td>{r.first_names}</td>
                 <td>{r.last_names}</td>
-                <td>{r.sex ? "M" : "F"}</td>
+                <td>{SEXO[r.sex]}</td>
                 <td>{r.born_date}</td>
                 <td>{r.born_location || "—"}</td>
                 <td>{r.document_number || "—"}</td>
-                <td>
-                  <button className="secundario" onClick={() => eliminar(r.id)}>Eliminar</button>
-                </td>
+                <td><button className="secundario" onClick={() => eliminar(r.id)}>Eliminar</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </main>
-  )
+  );
 }
