@@ -37,7 +37,10 @@ export const eliminarRegistro = (id) =>
 
 export async function descargarExcel() {
     const resp = await fetch(`${API}signup/export/`, { headers: headers() });
-    if (!resp.ok) throw new Error(`Error ${resp.status} al generar el Excel`);
+    if (!resp.ok) {
+        const data = await resp.json().catch(() => null);
+        throw new Error(data?.detail || `Error ${resp.status} al generar el Excel`);
+    }
 
     const blob = await resp.blob();
     const disposition = resp.headers.get("Content-Disposition") || "";
@@ -54,3 +57,10 @@ export async function descargarExcel() {
     enlace.remove();
     URL.revokeObjectURL(url);
 }
+
+export const editarRegistro = (id, datos) =>
+  fetch(`${API}/signup/edit/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(datos),
+    headers: { ...headers(), "Content-Type": "application/json" },
+  }).then(manejar);

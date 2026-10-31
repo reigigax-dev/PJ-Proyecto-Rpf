@@ -173,3 +173,226 @@ td.fotos img {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+.encabezado-tabla {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+td.acciones {
+  white-space: nowrap;
+}
+
+td.acciones button {
+  margin-right: 6px;
+  padding: 6px 10px;
+}
+
+tr.editando {
+  background: #2563eb14;
+}
+
+tr.editando input, tr.editando select {
+  width: 100%;
+  min-width: 70px;
+  box-sizing: border-box;
+  padding: 5px 6px;
+  font: inherit;
+  font-size: .85rem;
+  border: 1px solid #8888;
+  border-radius: 4px;
+  background: inherit;
+  color: inherit;
+}
+
+tr.editando input[type="date"] {
+  min-width: 130px;
+}
+
+tr.editando input[name="document"], tr.editando input[name="document_number"] {
+  min-width: 120px;
+}
+
+tr.editando .con-error {
+  border-color: #dc2626;
+}
+
+.error-campo {
+  display: block;
+  color: #dc2626;
+  font-size: .75rem;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.encabezado-tabla {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+td.acciones {
+  white-space: nowrap;
+}
+
+td.acciones button {
+  margin-right: 6px;
+  padding: 6px 10px;
+}
+
+tr.editando {
+  background: #2563eb14;
+}
+
+tr.editando input, tr.editando select {
+  width: 100%;
+  min-width: 70px;
+  box-sizing: border-box;
+  padding: 5px 6px;
+  font: inherit;
+  font-size: .85rem;
+  border: 1px solid #8888;
+  border-radius: 4px;
+  background: inherit;
+  color: inherit;
+}
+
+tr.editando input[type="date"] { 
+  min-width: 130px;
+}
+
+tr.editando input[name="document"], tr.editando input[name="document_number"] {
+  min-width: 120px;
+}
+
+tr.editando .con-error {
+  border-color: #dc2626;
+}
+
+.error-campo {
+  display: block;
+  color: #dc2626;
+  font-size: .75rem;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.botones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+dialog.modal {
+  padding: 0; border: 0; border-radius: 12px; width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px); background: #fff; color: #1c1917;
+  box-shadow: 0 20px 60px #0006;
+}
+
+dialog.modal::backdrop {
+  background: #0008;
+}
+
+dialog.modal form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+}
+
+dialog.modal header, dialog.modal footer {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+}
+
+dialog.modal header {
+  justify-content: space-between;
+  border-bottom: 1px solid #8884;
+}
+
+dialog.modal header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+dialog.modal footer {
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #8884;
+}
+
+dialog.modal .cerrar {
+  background: transparent;
+  color: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+dialog.modal .campos {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px 14px;
+  align-items: start;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+
+dialog.modal .campos label {
+  padding-top: 7px;
+  font-size: .9rem;
+  font-weight: 500;
+}
+
+dialog.modal .campos input:not([type="file"]), dialog.modal .campos select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  font: inherit;
+  border: 1px solid #8888;
+  border-radius: 6px;
+  background: inherit;
+  color: inherit;
+}
+
+dialog.modal .con-error {
+  border-color: #dc2626 !important;
+}
+
+dialog.modal .mensaje {
+  margin: 0 20px 8px;
+}
+
+.foto-opcional input {
+  font-size: .85rem;
+  padding-top: 5px;
+}
+
+.foto-opcional img {
+  display: block;
+  width: 160px;
+  margin-top: 6px;
+  border-radius: 6px;
+}
+
+@media (max-width: 520px) {
+  dialog.modal .campos { 
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  dialog.modal .campos label {
+    padding-top: 8px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  dialog.modal {
+    background: #292524;
+    color: #e7e5e4;
+  }
+}

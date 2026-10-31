@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
 import { descargarExcel, eliminarRegistro, listarRegistros } from "./api";
 import CapturaCarnet from "./components/CapturaCarnet";
+import FilaRegistro from "./components/FilaRegistro";
+import ModalRegistro from "./components/ModalRegistro";
 import "./App.css";
-
-function formatearRut(rut) {
-  if (!rut) return "";
-  const cuerpo = rut.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${cuerpo}-${rut.slice(-1)}`;
-}
-
-const SEXO = { true: "F", false: "M" };
 
 export default function App() {
   const [registros, setRegistros] = useState([]);
   const [error, setError] = useState("");
   const [descargando, setDescargando] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   const cargar = () =>
     listarRegistros()
@@ -28,10 +23,18 @@ export default function App() {
     cargar();
   }, []);
 
+  // Reemplaza solo la fila editada, sin recargar toda la tabla
+  const actualizar = (nuevo) =>
+    setRegistros((lista) => lista.map((r) => (r.id === nuevo.id ? nuevo : r)));
+
   async function eliminar(id) {
     if (!confirm(`¿Eliminar el registro #${id} y sus fotos?`)) return;
-    await eliminarRegistro(id).catch((e) => alert(e.message));
-    cargar();
+    try {
+      await eliminarRegistro(id);
+      setRegistros((lista) => lista.filter((r) => r.id !== id));
+    } catch (e) {
+      setError(e.message);
+    }
   }
 
   async function exportar() {
@@ -54,9 +57,12 @@ export default function App() {
 
       <div className="encabezado-tabla">
         <h2>Registros ({registros.length})</h2>
-        <button onClick={exportar} disabled={descargando || registros.length === 0}>
-          {descargando ? "Generando…" : "Descargar Excel"}
-        </button>
+        <div className="botones">
+          <button onClick={() => setModalAbierto(true)}>+ Nuevo registro</button>
+          <button className="secundario" onClick={exportar} disabled={descargando || registros.length === 0}>
+            {descargando ? "Generando…" : "Descargar Excel"}
+          </button>
+        </div>
       </div>
       {error && <p className="mensaje error">{error}</p>}
       <div className="tabla">
@@ -69,25 +75,17 @@ export default function App() {
           </thead>
           <tbody>
             {registros.map((r) => (
-              <tr key={r.id}>
-                <td>{r.id}</td>
-                <td className="fotos">
-                  {r.document_front_picture && <img src={r.document_front_picture} alt="Frente" />}
-                  {r.document_back_picture && <img src={r.document_back_picture} alt="Reverso" />}
-                </td>
-                <td>{formatearRut(r.document)}</td>
-                <td>{r.first_names}</td>
-                <td>{r.last_names}</td>
-                <td>{SEXO[r.sex]}</td>
-                <td>{r.born_date}</td>
-                <td>{r.born_location || "—"}</td>
-                <td>{r.document_number || "—"}</td>
-                <td><button className="secundario" onClick={() => eliminar(r.id)}>Eliminar</button></td>
-              </tr>
+              <FilaRegistro key={r.id} registro={r} onActualizado={actualizar} onEliminar={eliminar} />
             ))}
           </tbody>
         </table>
       </div>
+
+      <ModalRegistro
+        abierto={modalAbierto}
+        onCerrar={() => setModalAbierto(false)}
+        onCreado={(nuevo) => setRegistros((lista) => [...lista, nuevo])}
+      />
     </main>
   );
 }

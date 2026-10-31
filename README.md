@@ -1,8 +1,11 @@
-## Objetivos del Proyecto
-> #### Sacar una foto del carnet (por ambos lados), escanear los datos de dichos documentos y registrarlos.
+## REQUISITOS
+> Para utilizar algunas de las funcionalidades de este sistema local es necesario de presentar los sigientes requisitos:
 
-> #### Eliminar las imagenes no necesarias una vez se realice el proceso (Por casos de Leyes).
+#### Funcion de escaneo de carnet:
+>> Es necesario de presentar una webcam la cual permita sacar imagenes de buena calidad
+>> O la otra opcion es presentar un equipo con el sistema operativo `Windows 10` con la aplicacion de `Enlace Movil` con acceso a internet y un telefono con acceso a internet que tambien presente esta aplicacion de `Enlace Movil / Enlace a Windows`
+>>
+>> #### IMPORTANTE: El sistema puede segir funcionando sin estos requisitos pero solo permitira desde un formulario en un popup realizar los registros manualmente solicitando solo los datos principales (RUT, Nombres, Apellidos, Fecha de Nac.)
 
-> #### Los datos almacenarlos localmente en una base de datos para luego generar un excel con los registros.
-
-> #### Eliminar los datos los cuales no correspondan al dia actual. (teniendo una advertencia para dejar en claro)
+#### Paso a paso para la instalacion y funcionamiento de este sistema
+Software tesseract-ocr-w64
